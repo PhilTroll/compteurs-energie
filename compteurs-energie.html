@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compteurs · Solaire & ORES</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#10161f;
+  --panel:#171f2b;
+  --panel-2:#1d2733;
+  --line:#2a3744;
+  --sun:#f4a93c;
+  --grid:#3fb39a;
+  --text:#eef1f5;
+  --text-dim:#8d99a8;
+  --bad:#e2604f;
+  --radius:14px;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Space Grotesk',sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.app{max-width:980px;margin:0 auto;padding:20px 16px 60px;}
+
+header{
+  display:flex;align-items:baseline;justify-content:space-between;
+  padding:6px 2px 22px;border-bottom:1px solid var(--line);margin-bottom:22px;
+  flex-wrap:wrap;gap:8px;
+}
+.brand{display:flex;align-items:baseline;gap:10px;}
+.brand .mark{
+  font-family:'Archivo Black',sans-serif;font-size:26px;letter-spacing:-0.5px;
+  background:linear-gradient(135deg,var(--sun),#ffd27a);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.brand .since{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-dim);}
+.kebab{display:flex;gap:8px;}
+.iconbtn{
+  background:var(--panel-2);border:1px solid var(--line);color:var(--text-dim);
+  border-radius:9px;padding:7px 12px;font-size:12.5px;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;gap:6px;transition:.15s;
+}
+.iconbtn:hover{color:var(--text);border-color:#3a4856;}
+input[type=file]{display:none;}
+
+.meters{display:flex;gap:10px;margin-bottom:18px;}
+.meter-tab{
+  flex:1;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:14px 16px;cursor:pointer;transition:.15s;position:relative;overflow:hidden;
+}
+.meter-tab.active{border-color:var(--accent);background:var(--panel-2);}
+.meter-tab .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:8px;}
+.meter-tab .label{font-size:13px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;}
+.meter-tab .value{font-family:'Archivo Black',sans-serif;font-size:25px;margin-top:6px;}
+#tab-solar{--accent:var(--sun);}
+#tab-ores{--accent:var(--grid);}
+#tab-solar .dot{background:var(--sun);}
+#tab-ores .dot{background:var(--grid);}
+
+.panel{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px;margin-bottom:18px;
+}
+.panel h2{
+  font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim);
+  margin:0 0 14px;font-weight:600;
+}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field label{font-size:11.5px;color:var(--text-dim);}
+input,select{
+  background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+  border-radius:8px;padding:9px 10px;font-family:'IBM Plex Mono',monospace;font-size:14px;
+  outline:none;
+}
+input:focus,select:focus{border-color:var(--accent-active,var(--sun));}
+.btn{
+  background:var(--accent-active,var(--sun));color:#1a1206;border:none;border-radius:8px;
+  padding:10px 18px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;transition:.15s;
+}
+.btn:hover{filter:brightness(1.08);}
+.btn.secondary{background:var(--panel-2);color:var(--text);border:1px solid var(--line);}
+
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
+.stat{background:var(--panel-2);border-radius:10px;padding:12px 14px;}
+.stat .l{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;}
+.stat .v{font-family:'Archivo Black',sans-serif;font-size:21px;margin-top:4px;}
+.stat .v small{font-size:12px;font-family:'Space Grotesk',sans-serif;color:var(--text-dim);font-weight:400;}
+
+.month-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:7px;margin-top:4px;}
+.month-cell{background:var(--panel-2);border-radius:8px;padding:8px 6px;text-align:center;}
+.month-cell .m{font-size:10.5px;color:var(--text-dim);text-transform:uppercase;}
+.month-cell .v{font-family:'IBM Plex Mono',monospace;font-size:13px;margin-top:3px;}
+.month-cell.empty .v{color:var(--text-dim);}
+
+canvas{width:100%!important;}
+.chart-wrap{position:relative;height:280px;}
+
+table{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:13px;}
+th{text-align:left;color:var(--text-dim);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:6px 8px;border-bottom:1px solid var(--line);}
+td{padding:8px 8px;border-bottom:1px solid var(--line);}
+tr:last-child td{border-bottom:none;}
+.del{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:15px;}
+.del:hover{color:var(--bad);}
+.readings-scroll{max-height:260px;overflow-y:auto;}
+.empty-msg{color:var(--text-dim);font-size:13px;padding:14px 4px;text-align:center;}
+.note{font-size:12px;color:var(--text-dim);margin-top:10px;line-height:1.5;}
+.note code{background:var(--panel-2);padding:1px 5px;border-radius:5px;}
+.badge-ok{color:var(--grid);font-weight:600;}
+
+footer{text-align:center;color:var(--text-dim);font-size:11.5px;margin-top:30px;font-family:'IBM Plex Mono',monospace;}
+
+@media (max-width:560px){
+  .meters{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="brand">
+      <span class="mark">☀ Compteurs</span>
+      <span class="since">installation 2010 · Belgique</span>
+    </div>
+    <div class="kebab">
+      <button class="iconbtn" id="btn-import">↑ Importer CSV</button>
+      <button class="iconbtn" id="btn-export">↓ Exporter CSV</button>
+      <input type="file" id="file-input" accept=".csv">
+    </div>
+  </header>
+
+  <div class="meters">
+    <div class="meter-tab active" id="tab-solar" data-meter="solar">
+      <span><span class="dot"></span><span class="label">Production solaire</span></span>
+      <div class="value" id="tab-solar-value">—</div>
+    </div>
+    <div class="meter-tab" id="tab-ores" data-meter="ores">
+      <span><span class="dot"></span><span class="label">Consommation ORES</span></span>
+      <div class="value" id="tab-ores-value">—</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Nouveau relevé</h2>
+    <div class="row">
+      <div class="field">
+        <label for="in-date">Date</label>
+        <input type="date" id="in-date">
+      </div>
+      <div class="field" style="flex:1;min-width:140px;">
+        <label for="in-value">Index compteur (kWh)</label>
+        <input type="text" id="in-value" placeholder="ex: 24512,3">
+      </div>
+      <button class="btn" id="btn-add">Ajouter le relevé</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Vue d'ensemble — <span id="year-label"></span></h2>
+    <div class="row" style="margin-bottom:14px;">
+      <div class="field">
+        <label for="select-year">Année</label>
+        <select id="select-year"></select>
+      </div>
+    </div>
+    <div class="stats-grid" id="stats-grid"></div>
+    <h2 style="margin-top:20px;">Détail par mois (kWh)</h2>
+    <div class="month-grid" id="month-grid"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Évolution mensuelle — <span id="chart-year-label"></span></h2>
+    <div class="chart-wrap"><canvas id="evo-chart"></canvas></div>
+  </div>
+
+  <div class="panel">
+    <h2>Historique des relevés</h2>
+    <div class="readings-scroll">
+      <table>
+        <thead><tr><th>Date</th><th>Index (kWh)</th><th></th></tr></thead>
+        <tbody id="readings-body"></tbody>
+      </table>
+      <div class="empty-msg" id="empty-msg" style="display:none;">Aucun relevé pour ce compteur. Ajoutez-en un ci-dessus.</div>
+    </div>
+  </div>
+
+  <footer>
+    Export/import calés sur le format réel d'iConsométre : <code>Nom,Type,Chiffres,Décimales,Date,Rotation,Relevé,Unité,Note,Prix,Abonnement</code> — virgule comme séparateur, point comme décimale, date <code>J/M/AA HH:MM</code>.
+  </footer>
+
+</div>
+
+<script>
+let state = { readings: [] }; // {id, meter:'solar'|'ores', datetime:'YYYY-MM-DDTHH:MM', value:number}
+let currentMeter = 'solar';
+let chart = null;
+const STORAGE_KEY = 'readings_v2';
+
+const METER_META = {
+  solar: { label: 'Production solaire', activeVar:'--sun', csvNom:'Production solaire', csvType:'Compteur Solaire' },
+  ores:  { label: 'Consommation ORES', activeVar:'--grid', csvNom:'Consommation ORES', csvType:'Compteur électrique' },
+};
+
+const MONTHS = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function pad2(n){ return String(n).padStart(2,'0'); }
+
+function parseNum(str){
+  if (typeof str === 'number') return str;
+  if (!str) return NaN;
+  let s = String(str).trim();
+  if (s.includes(',') && s.includes('.')) {
+    // both present: dot = thousands sep, comma = decimal (FR convention)
+    s = s.replace(/\./g,'').replace(',', '.');
+  } else if (s.includes(',')) {
+    s = s.replace(/\s/g,'').replace(',', '.');
+  } else {
+    s = s.replace(/\s/g,'');
+  }
+  return parseFloat(s);
+}
+function fmtNum(n, decimals=1){
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return n.toLocaleString('fr-BE', {minimumFractionDigits:decimals, maximumFractionDigits:decimals});
+}
+
+// datetime helpers — all readings store full ISO 'YYYY-MM-DDTHH:MM'
+function dateOnly(dt){ return dt.slice(0,10); }
+function makeDatetime(dateStr, hh='12', mm='00'){ return `${dateStr}T${pad2(hh)}:${pad2(mm)}`; }
+
+async function loadState(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) state.readings = JSON.parse(raw);
+  } catch(e) { state.readings = []; }
+}
+async function saveState(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.readings)); }
+  catch(e) { console.error('Erreur de sauvegarde', e); alert('Erreur de sauvegarde locale : ' + e.message); }
+}
+
+function readingsFor(meter){
+  return state.readings.filter(r => r.meter === meter).sort((a,b)=> a.datetime.localeCompare(b.datetime));
+}
+
+function indexAtOrBefore(meter, dateStr){
+  const list = readingsFor(meter).filter(r => dateOnly(r.datetime) <= dateStr);
+  if (list.length === 0) return null;
+  return list[list.length-1].value;
+}
+function lastDayOfMonth(year, month){ return new Date(year, month+1, 0).toISOString().slice(0,10); }
+function firstDayOfMonth(year, month){ return new Date(year, month, 1).toISOString().slice(0,10); }
+function dayBefore(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  d.setDate(d.getDate()-1);
+  return d.toISOString().slice(0,10);
+}
+
+function monthlyValue(meter, year, month){
+  const endThis = lastDayOfMonth(year, month);
+  const endPrev = dayBefore(firstDayOfMonth(year, month));
+  const a = indexAtOrBefore(meter, endThis);
+  const b = indexAtOrBefore(meter, endPrev);
+  if (a === null || b === null) return null;
+  return Math.max(0, a - b);
+}
+
+function yearlyValue(meter, year){
+  let total = 0, any = false;
+  for(let m=0; m<12; m++){
+    const v = monthlyValue(meter, year, m);
+    if (v !== null){ total += v; any = true; }
+  }
+  return any ? total : null;
+}
+
+function allYears(){
+  const years = new Set();
+  state.readings.forEach(r => years.add(parseInt(dateOnly(r.datetime).slice(0,4))));
+  years.add(new Date().getFullYear());
+  return Array.from(years).sort((a,b)=>b-a);
+}
+
+function setMeterVar(meter){
+  document.documentElement.style.setProperty('--accent-active', `var(${METER_META[meter].activeVar})`);
+}
+
+function render(){
+  document.querySelectorAll('.meter-tab').forEach(t=>{
+    t.classList.toggle('active', t.dataset.meter === currentMeter);
+  });
+  setMeterVar(currentMeter);
+
+  const solarList = readingsFor('solar');
+  const oresList = readingsFor('ores');
+  document.getElementById('tab-solar-value').textContent = solarList.length
+    ? fmtNum(solarList[solarList.length-1].value) + ' kWh' : '—';
+  document.getElementById('tab-ores-value').textContent = oresList.length
+    ? fmtNum(oresList[oresList.length-1].value) + ' kWh' : '—';
+
+  renderYearSelector();
+  renderStats();
+  renderTable();
+  renderChart();
+}
+
+function renderYearSelector(){
+  const sel = document.getElementById('select-year');
+  const years = allYears();
+  const prevVal = sel.value;
+  sel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  if (prevVal && years.includes(parseInt(prevVal))) sel.value = prevVal;
+  document.getElementById('year-label').textContent = sel.value;
+  document.getElementById('chart-year-label').textContent = sel.value;
+}
+
+function renderStats(){
+  const year = parseInt(document.getElementById('select-year').value);
+  document.getElementById('year-label').textContent = year;
+  document.getElementById('chart-year-label').textContent = year;
+
+  const meter = currentMeter;
+  const yTotal = yearlyValue(meter, year);
+  const now = new Date();
+  const curMonth = now.getFullYear() === year ? now.getMonth() : 11;
+  const mVal = monthlyValue(meter, year, curMonth);
+  const lastReading = readingsFor(meter).slice(-1)[0];
+
+  const grid = document.getElementById('stats-grid');
+  grid.innerHTML = `
+    <div class="stat">
+      <div class="l">Total ${year}</div>
+      <div class="v">${yTotal===null?'—':fmtNum(yTotal,0)} <small>kWh</small></div>
+    </div>
+    <div class="stat">
+      <div class="l">${MONTHS[curMonth]} ${year}</div>
+      <div class="v">${mVal===null?'—':fmtNum(mVal,0)} <small>kWh</small></div>
+    </div>
+    <div class="stat">
+      <div class="l">Dernier index relevé</div>
+      <div class="v">${lastReading?fmtNum(lastReading.value):'—'} <small>${lastReading?dateOnly(lastReading.datetime):''}</small></div>
+    </div>
+    <div class="stat">
+      <div class="l">Nombre de relevés</div>
+      <div class="v">${readingsFor(meter).length}</div>
+    </div>
+  `;
+
+  const mgrid = document.getElementById('month-grid');
+  mgrid.innerHTML = MONTHS.map((m,i)=>{
+    const v = monthlyValue(meter, year, i);
+    return `<div class="month-cell ${v===null?'empty':''}">
+      <div class="m">${m}</div>
+      <div class="v">${v===null?'?':fmtNum(v,0)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderTable(){
+  const list = readingsFor(currentMeter).slice().sort((a,b)=> b.datetime.localeCompare(a.datetime));
+  const body = document.getElementById('readings-body');
+  const emptyMsg = document.getElementById('empty-msg');
+  if (list.length === 0){
+    body.innerHTML = '';
+    emptyMsg.style.display = 'block';
+    return;
+  }
+  emptyMsg.style.display = 'none';
+  body.innerHTML = list.map(r => {
+    const [d,t] = r.datetime.split('T');
+    const [y,m,day] = d.split('-');
+    return `<tr>
+      <td>${day}/${m}/${y}${t!=='12:00'?' '+t:''}</td>
+      <td>${fmtNum(r.value)}</td>
+      <td style="text-align:right;"><button class="del" data-id="${r.id}" title="Supprimer">✕</button></td>
+    </tr>`;
+  }).join('');
+  body.querySelectorAll('.del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      state.readings = state.readings.filter(r => r.id !== btn.dataset.id);
+      await saveState();
+      render();
+    });
+  });
+}
+
+function renderChart(){
+  const year = parseInt(document.getElementById('select-year').value);
+  const meter = currentMeter;
+  const data = MONTHS.map((_,i)=> monthlyValue(meter, year, i));
+  const colorMap = { solar: '#f4a93c', ores: '#3fb39a' };
+  const color = colorMap[meter];
+
+  const ctx = document.getElementById('evo-chart').getContext('2d');
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: MONTHS,
+      datasets: [{
+        label: METER_META[meter].label + ' (kWh)',
+        data: data,
+        backgroundColor: color,
+        borderRadius: 5,
+        maxBarThickness: 36,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ctx.raw === null ? 'Donnée manquante' : fmtNum(ctx.raw,0) + ' kWh'
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#2a3744' }, ticks: { color: '#8d99a8' } },
+        y: { grid: { color: '#2a3744' }, ticks: { color: '#8d99a8' }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+// EVENTS
+document.querySelectorAll('.meter-tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    currentMeter = tab.dataset.meter;
+    render();
+  });
+});
+
+document.getElementById('select-year').addEventListener('change', ()=>{
+  renderStats();
+  renderChart();
+});
+
+document.getElementById('btn-add').addEventListener('click', async ()=>{
+  const dateEl = document.getElementById('in-date');
+  const valEl = document.getElementById('in-value');
+  const date = dateEl.value;
+  const value = parseNum(valEl.value);
+  if (!date){ alert('Merci de choisir une date.'); return; }
+  if (isNaN(value)){ alert('Index invalide. Exemple attendu : 24512,3'); return; }
+
+  const existing = state.readings.find(r => r.meter === currentMeter && dateOnly(r.datetime) === date);
+  if (existing){
+    existing.value = value;
+  } else {
+    state.readings.push({ id: uid(), meter: currentMeter, datetime: makeDatetime(date), value });
+  }
+  await saveState();
+  valEl.value = '';
+  render();
+});
+
+// CSV EXPORT — format identique à iConsométre
+document.getElementById('btn-export').addEventListener('click', ()=>{
+  const header = ['Nom','Type','Chiffres','Décimales','Date','Rotation','Relevé','Unité','Note','Prix','Abonnement'];
+  const rows = [header];
+  state.readings
+    .slice()
+    .sort((a,b)=> a.meter.localeCompare(b.meter) || a.datetime.localeCompare(b.datetime))
+    .forEach(r=>{
+      const meta = METER_META[r.meter];
+      const [d, t] = r.datetime.split('T');
+      const [y, m, day] = d.split('-');
+      const dateStr = `${parseInt(day)}/${parseInt(m)}/${String(y).slice(-2)} ${t}`;
+      rows.push([
+        meta.csvNom, meta.csvType, '6', '0', dateStr, '0',
+        r.value.toFixed(3), 'kWh', '', '', ''
+      ]);
+    });
+  const csv = '\uFEFF' + rows.map(row => row.map(c => /,/.test(c) ? `"${c}"` : c).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `compteurs-energie-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// Basic CSV line splitter respecting double-quoted fields
+function splitCsvLine(line, delim){
+  const out = [];
+  let cur = '', inQuotes = false;
+  for (let i=0; i<line.length; i++){
+    const c = line[i];
+    if (c === '"'){ inQuotes = !inQuotes; continue; }
+    if (c === delim && !inQuotes){ out.push(cur); cur=''; continue; }
+    cur += c;
+  }
+  out.push(cur);
+  return out.map(s => s.trim());
+}
+
+// CSV IMPORT — comprend le format iConsométre natif ET notre propre export
+document.getElementById('btn-import').addEventListener('click', ()=>{
+  document.getElementById('file-input').click();
+});
+document.getElementById('file-input').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  const clean = text.replace(/^\uFEFF/, '');
+  const lines = clean.split(/\r?\n/).filter(l => l.trim().length > 0);
+  if (lines.length === 0) return;
+
+  const header = lines[0];
+  const delim = ',';
+  const cols0 = splitCsvLine(header, delim).map(c => c.toLowerCase());
+  const isIconsometre = cols0.includes('relevé') || cols0.includes('releve');
+  const startIdx = 1;
+
+  let added = 0, updated = 0, skipped = 0;
+
+  for (let i = startIdx; i < lines.length; i++){
+    const cols = splitCsvLine(lines[i], delim);
+    if (cols.length < 3){ skipped++; continue; }
+
+    let meter, dateStr, timeStr = '12:00', value;
+
+    if (isIconsometre){
+      // Nom,Type,Chiffres,Décimales,Date,Rotation,Relevé,Unité,Note,Prix,Abonnement
+      const [nom, type, , , dateRaw, , releve] = cols;
+      const typeLower = (type||'').toLowerCase();
+      if (typeLower.includes('solaire')) meter = 'solar';
+      else meter = 'ores'; // tout compteur électrique non-solaire => consommation
+
+      const m = dateRaw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}):(\d{2})/);
+      if (!m){ skipped++; continue; }
+      const [, dd, mm, yy, hh, min] = m;
+      const fullYear = yy.length === 2 ? 2000 + parseInt(yy) : parseInt(yy);
+      dateStr = `${fullYear}-${pad2(mm)}-${pad2(dd)}`;
+      timeStr = `${pad2(hh)}:${pad2(min)}`;
+      value = parseNum(releve);
+    } else {
+      // notre propre export simplifié éventuel: Date;Compteur;Index
+      const rowCols = lines[i].includes(';') ? splitCsvLine(lines[i],';') : cols;
+      const [dateRaw, meterRaw, valueRaw] = rowCols;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateRaw)) dateStr = dateRaw;
+      else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateRaw)){
+        const [d,m,y] = dateRaw.split('/'); dateStr = `${y}-${m}-${d}`;
+      } else { skipped++; continue; }
+      const meterLower = (meterRaw||'').toLowerCase();
+      if (meterLower.includes('solaire') || meterLower.includes('solar')) meter = 'solar';
+      else if (meterLower.includes('ores') || meterLower.includes('conso') || meterLower.includes('électrique')) meter = 'ores';
+      else { skipped++; continue; }
+      value = parseNum(valueRaw);
+    }
+
+    if (!dateStr || isNaN(value)){ skipped++; continue; }
+    const datetime = makeDatetime(dateStr, timeStr.split(':')[0], timeStr.split(':')[1]);
+
+    const existing = state.readings.find(r => r.meter === meter && r.datetime === datetime);
+    if (existing){ existing.value = value; updated++; }
+    else { state.readings.push({ id: uid(), meter, datetime, value }); added++; }
+  }
+  await saveState();
+  render();
+  alert(`Import terminé : ${added} ajoutés, ${updated} mis à jour, ${skipped} ignorés.`);
+  e.target.value = '';
+});
+
+// INIT
+(async function init(){
+  document.getElementById('in-date').valueAsDate = new Date();
+  await loadState();
+  render();
+})();
+</script>
+</body>
+</html>
